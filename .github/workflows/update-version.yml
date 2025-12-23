@@ -1,0 +1,79 @@
+name: Update app version badge on merge to master
+
+on:
+  push:
+    branches: [ master ]
+  # Allow manual runs from the Actions tab for testing or forced bumps
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    name: Bump package.json patch and update badge
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Read package.json version and update src/index.html badge
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create a small Node.js script that reads package.json version,
+          # updates the badge in src/index.html, commits, and pushes the change.
+          cat > update_version.js <<'JS'
+          const fs = require('fs');
+          const cp = require('child_process');
+
+          const pkgPath = 'package.json';
+          const idxPath = 'src/index.html';
+
+          const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+
+          // Read current version from package.json (do NOT modify package.json)
+          const newVersion = pkg.version;
+          if (!newVersion || !/^\d+\.\d+\.\d+$/.test(newVersion)) {
+            throw new Error('package.json version is not a valid semver (major.minor.patch)');
+          }
+
+          // avoid running if the last commit was produced by this action
+          const lastMsg = String(cp.execSync('git log -1 --pretty=%B')).trim();
+          if (lastMsg.startsWith('ci: sync version')) {
+            console.log('Last commit is a sync version commit; exiting.');
+            process.exit(0);
+          }
+
+          // Update src/index.html version badge (supports v1.2.3 or 1.2.3 formats)
+          let html = fs.readFileSync(idxPath, 'utf8');
+          const updated = html.replace(/(<div id="versionBadge"[^>]*>)(v?\d+\.\d+\.\d+)(<\/div>)/, `$1v${newVersion}$3`);
+          if (updated === html) {
+            console.log('No version badge change needed.');
+            process.exit(0);
+          }
+          fs.writeFileSync(idxPath, updated, 'utf8');
+
+          // Commit and push back to master. Use a clear commit message so the
+          // script can detect and avoid re-running on the resulting push.
+          cp.execSync('git config user.name "github-actions[bot]"');
+          cp.execSync('git config user.email "41898282+github-actions[bot]@users.noreply.github.com"');
+          cp.execSync('git add src/index.html');
+          try {
+            cp.execSync(`git commit -m "ci: sync version to v${newVersion}"`);
+            // push back to the current branch (master)
+            cp.execSync('git push origin HEAD:master');
+            console.log('Version synced to', newVersion);
+          } catch (e) {
+            console.log('No changes to commit or push failed:', String(e.message || e));
+          }
+          JS
+
+          node update_version.js

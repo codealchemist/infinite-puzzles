@@ -1,0 +1,25 @@
+{
+  "name": "infinite-puzzles",
+  "version": "1.4.0",
+  "description": "Infinite puzzles",
+  "keywords": [
+    "infinite",
+    "puzzle",
+    "puzzles"
+  ],
+  "homepage": "https://github.com/codealchemist/infinite-puzzles#readme",
+  "bugs": {
+    "url": "https://github.com/codealchemist/infinite-puzzles/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codealchemist/infinite-puzzles.git"
+  },
+  "license": "ISC",
+  "author": "Alberto Miranda",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}

@@ -1,0 +1,1825 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Infinite Puzzles</title>
+
+    <!-- Fonts. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=EB+Garamond&family=Google+Sans+Flex:opsz@6..144&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      .phrase-text {
+        font-family: 'EB Garamond', serif;
+        font-optical-sizing: auto;
+        font-weight: 400;
+        font-style: normal;
+      }
+
+      body {
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        overflow-x: hidden;
+        font-family: 'Google Sans', sans-serif;
+        font-optical-sizing: auto;
+        font-weight: 400;
+        font-style: normal;
+        font-variation-settings: 'GRAD' 0;
+      }
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, 140px);
+        border: 2px solid #000;
+        margin-bottom: 30px;
+        background-color: rgba(100, 110, 125, 0.5);
+      }
+      .grid-cell {
+        height: 110px;
+        border: 1px solid #000;
+        display: flex;
+        flex-direction: column;
+      }
+      .target-number {
+        flex: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.2rem;
+        border-bottom: 1.5px solid #000;
+      }
+
+      .input-row {
+        flex: 1;
+        display: flex;
+        background: rgba(250, 250, 225, 0.25);
+        transition: background 0.3s;
+        opacity: 0.5;
+      }
+      .input-row input,
+      .input-row select {
+        width: 33.3%;
+        border: none;
+        border-right: 1px solid #000;
+        text-align: center;
+        font-size: 1rem;
+        background: transparent;
+        outline: none;
+      }
+      .input-row select {
+        text-align-last: center;
+        appearance: none;
+        cursor: pointer;
+      }
+      .input-row input:last-child {
+        border-right: none;
+      }
+
+      /* Validation Colors */
+      .err-math {
+        background-color: #ff4d4d !important;
+        color: white;
+      }
+      .err-pair {
+        background-color: #ffa500 !important;
+      }
+      .valid {
+        background-color: #d4edda !important;
+      }
+
+      /* Strip Styling */
+      .strip {
+        display: flex;
+        border: 1px solid #000;
+        margin-top: 10px;
+        opacity: 0.5;
+      }
+      .strip-cell {
+        width: 42px;
+        height: 42px;
+        border-right: 1px solid #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        transition: all 0.3s;
+        background: rgba(250, 250, 225, 0.25);
+      }
+      .strip-cell:last-child {
+        border-right: none;
+      }
+      .strip-input {
+        width: 100%;
+        height: 100%;
+        border: none;
+        text-align: center;
+        font-size: 1.1rem;
+        outline: none;
+        background: transparent;
+      }
+
+      /* Strip Validation Colors */
+      .s-red {
+        background-color: #ff4d4d !important;
+        color: white;
+      }
+      .s-yellow {
+        background-color: #ffff00 !important;
+      }
+      .s-green {
+        background-color: #d4edda !important;
+      }
+
+      /* Mark a top-grid target as used when its row is valid */
+      .target-number.t-used {
+        background-color: #6a4c93;
+        color: #fff;
+        font-weight: 700;
+        border-bottom-color: rgba(0, 0, 0, 0.12);
+      }
+
+      /* Mark numeric inputs that are duplicates (used more than once) */
+      .input-row input.num-dup {
+        background-color: #6a4c93 !important;
+        color: #fff !important;
+        font-weight: 700;
+      }
+
+      /* Animated Tada */
+      #tada {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 25vw;
+        z-index: 10001; /* ensure overlay and everything is under the tada */
+        cursor: pointer;
+        user-select: none;
+      }
+      .tada-animate {
+        animation: growFade 1.5s forwards;
+      }
+      /* Heartbeat animation (continuous while visible) */
+      .tada-beat {
+        display: block;
+        animation: beat 1s ease-in-out infinite;
+      }
+      @keyframes beat {
+        0% {
+          transform: translate(-50%, -50%) scale(1);
+        }
+        14% {
+          transform: translate(-50%, -50%) scale(1.16);
+        }
+        28% {
+          transform: translate(-50%, -50%) scale(0.98);
+        }
+        42% {
+          transform: translate(-50%, -50%) scale(1.08);
+        }
+        70% {
+          transform: translate(-50%, -50%) scale(1);
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(1);
+        }
+      }
+      @keyframes growFade {
+        0% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(4);
+          opacity: 0;
+        }
+      }
+
+      /* Background image container */
+      #bg {
+        position: fixed;
+        inset: 0;
+        background-size: cover;
+        background-position: center center;
+        background-repeat: no-repeat;
+        filter: blur(3px) brightness(0.7) saturate(1.05);
+        transform: scale(1.04);
+        z-index: -1;
+        pointer-events: none;
+      }
+
+      /* Celebration overlay (dark background behind tada + confetti) */
+      #celebrationOverlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 9998; /* under #tada but above everything else */
+      }
+      #celebrationOverlay.visible {
+        display: flex;
+      }
+
+      /* Circular logo (background image clipped to circle)
+         Unified styles for both in-document and inside the offcanvas panel */
+      #logo {
+        position: absolute;
+        bottom: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: calc(100% - 32px);
+        max-width: 220px;
+        aspect-ratio: 1 / 1;
+        height: auto;
+        border-radius: 50%;
+        overflow: hidden;
+        background-image: url('logo2.png');
+        background-size: cover;
+        background-position: 0 -3px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+        z-index: 101;
+        transition: width 220ms ease, height 220ms ease, left 220ms ease,
+          top 220ms ease, transform 220ms ease;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 25px;
+        justify-content: center;
+      }
+      button {
+        padding: 12px 20px;
+        font-weight: bold;
+        cursor: pointer;
+        border: 2px solid #000;
+        background: #fff;
+        transition: 0.2s;
+        font-family: inherit;
+      }
+      button:hover {
+        background: #000;
+        color: #fff;
+      }
+      .solve-btn {
+        background: #f0f0f0;
+      }
+      .solve-btn:hover {
+        background: #ddd;
+        color: #000;
+      }
+      /* Responsive adjustments */
+      .grid {
+        width: 100%;
+        max-width: 680px;
+        box-sizing: border-box;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+      .grid-cell {
+        max-height: 110px;
+      }
+      .target-number {
+        font-size: clamp(1.2rem, 2.2vw, 2.2rem);
+      }
+      .input-row input,
+      .input-row select {
+        font-size: clamp(0.9rem, 1.6vw, 1rem);
+        padding: 6px;
+      }
+      .strip {
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .strip-cell {
+        width: clamp(36px, 6.2vw, 56px);
+        height: clamp(36px, 6.2vw, 56px);
+      }
+      #tada {
+        font-size: clamp(3rem, 25vw, 40vw);
+      }
+      button {
+        padding: clamp(8px, 2vw, 12px) clamp(10px, 3vw, 20px);
+        font-size: clamp(0.85rem, 1.6vw, 1rem);
+      }
+
+      @media (min-width: 1024px) {
+        .hamburger {
+          padding-top: 9px;
+        }
+      }
+
+      @media (max-width: 1024px) {
+        .strip {
+          width: 100%;
+          max-width: 590px;
+          box-sizing: border-box;
+          padding: 15px 0;
+          justify-content: center;
+          gap: 10px;
+        }
+
+        .strip-cell {
+          margin: 2px;
+        }
+      }
+
+      @media (max-width: 855px) {
+        .strip {
+          width: 100%;
+          max-width: 560px;
+          box-sizing: border-box;
+          padding: 15px 0;
+          justify-content: center;
+          gap: 10px;
+        }
+
+        .strip-cell {
+          margin: 2px;
+        }
+
+        .hamburger {
+          padding-top: 7px;
+        }
+      }
+
+      @media (max-width: 770px) {
+        .strip {
+          width: 100%;
+          max-width: 520px;
+          box-sizing: border-box;
+          padding: 15px 0;
+          justify-content: center;
+          gap: 10px;
+        }
+
+        .strip-cell {
+          margin: 2px;
+        }
+
+        .hamburger {
+          padding-top: 6px;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .grid {
+          max-width: 520px;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 4px;
+        }
+        .grid-cell {
+          max-height: 65px;
+        }
+
+        .input-row select,
+        .input-row input {
+          padding: 4px;
+        }
+
+        .strip {
+          width: 100%;
+          max-width: 720px;
+          box-sizing: border-box;
+          padding: 2px;
+          justify-content: center;
+          gap: 0;
+        }
+
+        .strip-cell {
+          margin: 2px;
+        }
+
+        .hamburger {
+          padding-top: 5px;
+        }
+      }
+
+      @media (max-width: 520px) {
+        /* On narrow screens reduce to 2 columns */
+        .grid {
+          max-width: 420px;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 2px;
+        }
+        .grid-cell {
+          max-height: 50px;
+        }
+        .controls {
+          gap: 5px;
+        }
+        .input-row select,
+        .input-row input {
+          padding: 2px;
+        }
+        /* iPhone SE and very small screens: make bottom strip wrap into two rows of 8 */
+        .strip {
+          width: 100%;
+          max-width: 360px;
+          box-sizing: border-box;
+          padding: 2px;
+          justify-content: center;
+          gap: 0;
+        }
+        .strip-cell {
+          /* 8 items per row -> 12.5% each; subtract gap compensation */
+          flex: 0 0 calc(12.5% - 6px);
+          width: calc(12.5% - 6px);
+          height: calc(12.5% - 6px + 18px);
+          min-width: 28px;
+          min-height: 32px;
+          border-right: none;
+          margin: 2px;
+          font-size: 0.95rem;
+        }
+        /* avoid double borders when wrapping */
+        .strip-cell {
+          border: 1px solid #000;
+        }
+        .strip-cell:last-child {
+          border-right: 1px solid #000;
+        }
+
+        .hamburger {
+          padding-top: 5px;
+        }
+      }
+
+      /* Extra-small screens (older phones) */
+      @media (max-width: 360px) {
+        .strip {
+          max-width: 340px;
+          padding: 2px;
+          gap: 0;
+        }
+        .strip-cell {
+          font-size: 0.85rem;
+          min-width: 26px;
+          min-height: 30px;
+          margin: 2px;
+        }
+        .target-number {
+          font-size: 1.05rem;
+        }
+
+        .hamburger {
+          padding-top: 5px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .tada-beat,
+        .tada-animate {
+          animation: none !important;
+        }
+      }
+
+      /* Phrase box: centered in the white space at the bottom */
+      #phrase {
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 72px; /* above version badge and controls */
+        max-width: min(880px, 92vw);
+        width: calc(100% - 48px);
+        padding: 10px 16px;
+        text-align: center;
+        font-style: italic;
+        color: black;
+        background: rgba(250, 250, 225, 0.25);
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        z-index: 10;
+        pointer-events: auto;
+        cursor: copy;
+        line-height: 1.4;
+        font-size: 3vw;
+        transition: transform 180ms ease, background 180ms ease,
+          box-shadow 180ms ease, opacity 180ms ease;
+      }
+
+      /* Visual confirmation when phrase is copied */
+      #phrase.phrase-copied {
+        transform: translateX(-50%) scale(1.02);
+        background: rgba(255, 255, 255, 0.4);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+        opacity: 0.98;
+      }
+
+      /* App version badge (bottom-left) */
+      #versionBadge {
+        position: fixed;
+        left: 10px;
+        bottom: 8px;
+        background: rgba(0, 0, 0, 0.6);
+        color: #ddd;
+        padding: 6px 8px;
+        font-size: 0.8rem;
+        border-radius: 6px;
+        z-index: 20000;
+        pointer-events: auto;
+        opacity: 0.9;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      }
+
+      @media (max-width: 520px) {
+        #phrase {
+          bottom: 84px;
+          padding: 8px 12px;
+          font-size: 0.95rem;
+        }
+      }
+      /* Hamburger + Offcanvas panel */
+      .hamburger {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: black;
+        color: white;
+        border: 2px solid #000;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+        z-index: 8000;
+        cursor: pointer;
+        font-size: 20px;
+      }
+
+      .offcanvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: min(360px, 86vw);
+        max-width: 420px;
+        background: rgba(0, 0, 0, 0.5);
+        color: #eee;
+        transform: translateX(-112%);
+        transition: transform 300ms ease;
+        /* keep the offcanvas below confirmation modals */
+        z-index: 9000;
+        box-shadow: 6px 0 36px rgba(0, 0, 0, 0.28);
+        overflow: auto;
+      }
+
+      .offcanvas.open {
+        transform: translateX(0);
+      }
+
+      .offcanvas .offcanvas-inner {
+        padding: 20px;
+      }
+
+      .offcanvas-close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(70, 70, 70, 0.8);
+        color: #eee;
+        border-radius: 50%;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+      }
+
+      .offcanvas-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        /* backdrop sits under confirmation dialogs */
+        z-index: 8900;
+        opacity: 0;
+        transition: opacity 220ms ease;
+        pointer-events: none;
+      }
+
+      /* Ensure SweetAlert2 dialogs appear above the offcanvas panel/backdrop */
+      .swal2-container {
+        z-index: 30000 !important;
+      }
+
+      .offcanvas-backdrop.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      /* Simple nav list inside offcanvas */
+      #main-nav {
+        margin: 0;
+        padding: 0;
+      }
+
+      #main-nav ul {
+        list-style: none;
+        padding: 0;
+        margin: 50px 0;
+      }
+
+      #main-nav li {
+        border-bottom: 1px solid #222;
+      }
+
+      #main-nav a {
+        display: block;
+        padding: 14px 10px;
+        color: #eee;
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      #main-nav a:hover {
+        background: #f4f4f4;
+        color: #222;
+      }
+    </style>
+    <!-- SweetAlert2 for nicer confirmation dialogs -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  </head>
+  <body>
+    <div id="bg" aria-hidden="true"></div>
+    <div id="celebrationOverlay" aria-hidden="true"></div>
+    <div id="tada" onclick="closeTada()">🎉</div>
+
+    <!-- Hamburger trigger (top-left) -->
+    <button
+      id="hamburger"
+      class="hamburger"
+      aria-label="Open menu"
+      aria-controls="offcanvas"
+      aria-expanded="false"
+    >
+      ☰
+    </button>
+
+    <!-- Off-canvas panel + backdrop -->
+    <div
+      id="offcanvas"
+      class="offcanvas"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+    >
+      <div class="offcanvas-inner">
+        <button class="offcanvas-close" aria-label="Close menu">&times;</button>
+        <nav id="main-nav" aria-label="Main Navigation">
+          <ul>
+            <li>
+              <a href="#" onclick="validateSolution(); return false;"
+                >Validate Solution</a
+              >
+            </li>
+            <li>
+              <a href="#" onclick="clearBoardConfirmed(); return false;"
+                >Clear Inputs</a
+              >
+            </li>
+            <li>
+              <a href="#" onclick="newGameConfirmed(); return false;"
+                >New Game</a
+              >
+            </li>
+            <li>
+              <a href="#" onclick="exportPuzzle(); return false;"
+                >Export Puzzle</a
+              >
+            </li>
+            <li>
+              <a href="#" onclick="autoSolveConfirmed(); return false;"
+                >Auto-Solve (Cheat)</a
+              >
+            </li>
+          </ul>
+        </nav>
+        <div id="logo" aria-hidden="true"></div>
+      </div>
+    </div>
+    <div id="offcanvas-backdrop" class="offcanvas-backdrop" hidden></div>
+
+    <div class="grid" id="mainGrid"></div>
+    <div class="strip" id="numberStrip"></div>
+    <div id="phrase" class="phrase-text"></div>
+
+    <div id="versionBadge" aria-hidden="true">v1.4.0</div>
+    <div id="menu" size="lg" label="Menu"></div>
+    <script>
+      // Offcanvas open/close behavior for the hamburger
+      ;(function () {
+        const hamburger = document.getElementById('hamburger')
+        const offcanvas = document.getElementById('offcanvas')
+        const backdrop = document.getElementById('offcanvas-backdrop')
+        if (!hamburger || !offcanvas || !backdrop) return
+
+        const open = () => {
+          offcanvas.classList.add('open')
+          offcanvas.setAttribute('aria-hidden', 'false')
+          backdrop.classList.add('visible')
+          backdrop.hidden = false
+          hamburger.setAttribute('aria-expanded', 'true')
+          // lock body scroll while open
+          document.documentElement.style.overflow = 'hidden'
+          // move focus into the panel
+          const first = offcanvas.querySelector('a, button, input')
+          if (first) first.focus()
+        }
+
+        const close = () => {
+          offcanvas.classList.remove('open')
+          offcanvas.setAttribute('aria-hidden', 'true')
+          backdrop.classList.remove('visible')
+          // wait for transition to finish before hiding to allow pointer-events off
+          setTimeout(() => (backdrop.hidden = true), 260)
+          hamburger.setAttribute('aria-expanded', 'false')
+          document.documentElement.style.overflow = ''
+          hamburger.focus()
+        }
+
+        hamburger.addEventListener('click', e => {
+          const expanded = hamburger.getAttribute('aria-expanded') === 'true'
+          if (expanded) close()
+          else open()
+        })
+
+        backdrop.addEventListener('click', close)
+        const closeBtn = offcanvas.querySelector('.offcanvas-close')
+        if (closeBtn) closeBtn.addEventListener('click', close)
+
+        // close on ESC
+        document.addEventListener('keydown', e => {
+          if (e.key === 'Escape' && offcanvas.classList.contains('open')) {
+            close()
+          }
+        })
+      })()
+
+      let currentGame = { strip: [], preFilled: {}, targets: [] }
+      const overlay = document.getElementById('celebrationOverlay')
+
+      // Compute pair usage from current inputs and mark target numbers
+      // whose rows are part of a correctly used pair (one '+' and one '*').
+      function markUsedTargets() {
+        const pairUsage = {}
+
+        // gather row states
+        currentGame.targets.forEach((t, i) => {
+          const gridEl = document.getElementById(`grid-${i}`)
+          if (!gridEl) return
+          const row = gridEl.querySelector('.input-row')
+          if (!row) return
+          const n1v = row.querySelector('.n1')?.value
+          const n2v = row.querySelector('.n2')?.value
+          const opv = row.querySelector('.op')?.value
+          const n1 = parseInt(n1v)
+          const n2 = parseInt(n2v)
+          const result = opv === '+' ? n1 + n2 : opv === '*' ? n1 * n2 : null
+          // only consider mathematically-correct rows
+          if (!isNaN(n1) && !isNaN(n2) && result === t.result) {
+            const key = [n1, n2].sort((a, b) => a - b).join('_')
+            if (!pairUsage[key])
+              pairUsage[key] = { plus: 0, times: 0, indices: [] }
+            if (opv === '+') pairUsage[key].plus++
+            if (opv === '*') pairUsage[key].times++
+            pairUsage[key].indices.push(i)
+          }
+        })
+
+        // clear existing marks
+        document
+          .querySelectorAll('.target-number.t-used')
+          .forEach(el => el.classList.remove('t-used'))
+
+        // Mark targets that are part of a correctly used pair
+        for (const key in pairUsage) {
+          const p = pairUsage[key]
+          if (p.plus === 1 && p.times === 1) {
+            p.indices.forEach(idx => {
+              const gridEl = document.getElementById(`grid-${idx}`)
+              if (!gridEl) return
+              const targetEl = gridEl.querySelector('.target-number')
+              if (targetEl) targetEl.classList.add('t-used')
+            })
+          }
+        }
+      }
+
+      // Mark numeric inputs in the top grid that appear more than once.
+      // This is triggered on blur of any n1/n2 input so when the second
+      // matching value is entered and blurred, both inputs get marked.
+      function markDuplicateInputs() {
+        const inputs = Array.from(
+          document.querySelectorAll('.input-row .n1, .input-row .n2')
+        )
+        const map = {}
+        // clear previous duplicate marks
+        inputs.forEach(inp => inp.classList.remove('num-dup'))
+
+        inputs.forEach(inp => {
+          const v = (inp.value || '').toString().trim()
+          if (!v) return
+          // treat numeric equality; keep as string key to allow leading zeros if any
+          map[v] = map[v] || []
+          map[v].push(inp)
+        })
+
+        Object.keys(map).forEach(k => {
+          const arr = map[k]
+          if (arr.length >= 2) {
+            arr.forEach(el => el.classList.add('num-dup'))
+          }
+        })
+      }
+      const phrases = {
+        archimedes: [
+          'Give me a place to stand, and I shall move the earth.',
+          'Eureka! (I have found it!)',
+          'There are things which seem incredible to most men who have not studied Mathematics.',
+          'Mathematics reveals its secrets only to those who approach it with pure love.'
+        ],
+        aryabhata: [
+          'The earth is spherical and it rotates on its own axis.',
+          'He who knows the movement of the earth and the planets reaches the high heaven of the gods.'
+        ],
+        cantor: [
+          'In mathematics the art of proposing a question must be held of higher value than solving it.',
+          'The essence of mathematics lies in its freedom.',
+          'A set is a Many that allows itself to be thought of as a One.'
+        ],
+        cartwright: [
+          "The mathematician's patterns, like the painter's or the poet's, must be beautiful; the ideas like the colors or the words, must fit together in a harmonious way."
+        ],
+        descartes: [
+          'Cogito, ergo sum (I think, therefore I am).',
+          'Perfect numbers like perfect men are very rare.',
+          'Divide each difficulty into as many parts as is feasible and necessary to resolve it.',
+          'Each problem that I solved became a rule, which served afterwards to solve other problems.'
+        ],
+        einstein: [
+          'Pure mathematics is, in its way, the poetry of logical ideas.',
+          'God does not play dice with the universe.',
+          'Imagination is more important than knowledge.',
+          'The most incomprehensible thing about the world is that it is at all comprehensible.',
+          'Everything should be made as simple as possible, but not simpler.'
+        ],
+        euclid: [
+          'There is no royal road to geometry.',
+          'The laws of nature are but the mathematical thoughts of God.',
+          'A line is length without breadth.'
+        ],
+        euler: [
+          'Mathematicians have tried in vain to this day to discover some order in the sequence of prime numbers.',
+          'Now I will have less distraction.',
+          'Logic is the foundation of the certainty of all the knowledge we acquire.'
+        ],
+        fermat: [
+          'I have discovered a truly marvelous proof of this, which this margin is too narrow to contain.'
+        ],
+        fibonacci: [
+          'If I have by chance omitted anything more or less proper or necessary, I beg forgiveness, since there is no one who is without fault and circumspect in all matters.'
+        ],
+        galois: [
+          'I have not the time.',
+          'Tell my friends I need all my courage to die at twenty.'
+        ],
+        gauss: [
+          'Mathematics is the queen of the sciences and number theory is the queen of mathematics.',
+          'Few, but ripe (Pauca sed matura).',
+          'It is not knowledge, but the act of learning... which grants the greatest enjoyment.',
+          'God does arithmetic.'
+        ],
+        godel: [
+          'Either mathematics is too big for the human mind, or the human mind is more than a machine.',
+          'I don’t believe in empirical science. I only believe in a priori truth.'
+        ],
+        grothendieck: [
+          'The point is that we should be able to see a thing for what it is.',
+          'The work of a mathematician is a work of discovery, not of invention.'
+        ],
+        hardy: [
+          'A mathematician, like a painter or a poet, is a maker of patterns.',
+          'Beauty is the first test: there is no permanent place in the world for ugly mathematics.'
+        ],
+        hawking: [
+          'Quiet people have the loudest minds.',
+          'However difficult life may seem, there is always something you can do and succeed at.',
+          'We are just an advanced breed of monkeys on a minor planet of a very average star.'
+        ],
+        hillbert: [
+          'We must know, we will know (Wir müssen wissen, wir werden wissen).',
+          'Mathematics knows no races or geographic boundaries; for mathematics, the cultural world is one country.'
+        ],
+        khwarizmi: ['The power of calculation is the first among the powers.'],
+        leibniz: [
+          'Music is the pleasure the human mind experiences from counting without being aware that it is counting.',
+          'Everything that is possible demands to exist.'
+        ],
+        nash: [
+          "I've always believed in numbers, in the equations and logics that lead to reason.",
+          'The only thing greater than the power of the mind is the courage of the heart.'
+        ],
+        neumann: [
+          'If people do not believe that mathematics is simple, it is only because they do not realize how complicated life is.',
+          "Young man, in mathematics you don't understand things. You just get used to them."
+        ],
+        newton: [
+          'If I have seen further it is by standing on the shoulders of Giants.',
+          'I can calculate the motion of heavenly bodies, but not the madness of people.',
+          'Truth is ever to be found in simplicity, and not in the multiplicity and confusion of things.',
+          'No great discovery was ever made without a bold guess.'
+        ],
+        noether: [
+          'If one proves the equality of two numbers a and b by showing first that a <= b and then that a >= b, it is unfair; one should instead show that they are really identical.',
+          'My methods are really methods of working and thinking; this is why they have crept in everywhere anonymously.'
+        ],
+        pascal: [
+          'The heart has its reasons which reason knows nothing of.',
+          'Justice without force is powerless; force without justice is tyrannical.',
+          "All of humanity's problems stem from man's inability to sit quietly in a room alone."
+        ],
+        pythagoras: [
+          'Numbers rule the universe.',
+          'Reason is immortal, all else is mortal.',
+          "The oldest, shortest words—'yes' and 'no'—are those which require the most thought.",
+          'There is geometry in the humming of the strings, there is music in the spacing of the spheres.'
+        ],
+        ramanujan: [
+          'An equation for me has no meaning, unless it represents a thought of God.',
+          'While asleep, I had a very unusual experience... a red screen formed by flowing blood... it began to write expressions.'
+        ],
+        riemann: [
+          'If I only had the theorems! Then I should find the proofs easily enough.'
+        ],
+        turing: [
+          'Sometimes it is the people no one can imagine anything of who do the things no one can imagine.',
+          'We can only see a short distance ahead, but we can see plenty there that needs to be done.',
+          'A computer would deserve to be called intelligent if it could deceive a human into believing that it was human.'
+        ]
+      }
+      const images = [
+        'archimedes.jpeg',
+        'aryabhata.jpg',
+        'cantor.jpg',
+        'cartwright.webp',
+        'descartes.jpg',
+        'einstein.webp',
+        'euclid.jpg',
+        'euler.jpg',
+        'fermat.jpg',
+        'fibonacci.jpg',
+        'galois.webp',
+        'gauss.jpg',
+        'godel.jpg',
+        'grothendieck.webp',
+        'hardy.jpg',
+        'hawking.jpg',
+        'hillbert.webp',
+        'khwarizmi.jpg',
+        'leibniz.webp',
+        'nash.jpg',
+        'neumann.jpg',
+        'newton.jpg',
+        'noether.jpg',
+        'pascal.webp',
+        'pythagoras.webp',
+        'ramanujan.jpg',
+        'riemann.jpg',
+        'turing.webp'
+      ]
+
+      // Set a random blurred background from the `images` array
+      function setRandomBackground() {
+        try {
+          const bg = document.getElementById('bg')
+          if (!bg) return
+          const idx = Math.floor(Math.random() * images.length)
+          const src = images[idx]
+          // assume images are located in an `images/` folder next to this file
+          bg.style.backgroundImage = `url("images/${src}")`
+
+          // Pick a random phrase from the corresponding mathematician.
+          const name = src.split('.')[0] // get name without extension
+          const phrasesForPerson = phrases[name]
+          if (phrasesForPerson && phrasesForPerson.length > 0) {
+            const pidx = Math.floor(Math.random() * phrasesForPerson.length)
+            const phrase = phrasesForPerson[pidx]
+
+            // Write the phrase on the `phrase` div.
+            const phraseDiv = document.getElementById('phrase')
+            if (phraseDiv) {
+              phraseDiv.innerText = `“${phrase}” — ${
+                name.charAt(0).toUpperCase() + name.slice(1)
+              }`
+            }
+            // Also set as overlay title for accessibility
+            overlay.setAttribute(
+              'title',
+              `Background image of ${name}, with quote: ${phrase}`
+            )
+          }
+        } catch (e) {
+          console.warn('failed to set background image', e)
+        }
+      }
+
+      function generateNewPuzzle() {
+        // 1. Generate 16 numbers for the strip
+        let numbers = []
+        for (let i = 0; i < 16; i++) {
+          numbers.push(Math.floor(Math.random() * 45) + 1)
+        }
+        // Sort to maintain ascending order logic
+        numbers.sort((a, b) => a - b)
+
+        // 2. Create 8 unique pairs
+        let pairs = []
+        let pool = [...numbers]
+        while (pool.length > 0) {
+          let n1 = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]
+          let n2 = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]
+          pairs.push([n1, n2])
+        }
+
+        // 3. Create 16 target cells (8 additions, 8 multiplications)
+        let targets = []
+        pairs.forEach(p => {
+          targets.push({ result: p[0] + p[1], n1: p[0], n2: p[1], op: '+' })
+          targets.push({ result: p[0] * p[1], n1: p[0], n2: p[1], op: '*' })
+        })
+
+        // Shuffle targets so they aren't in pair order
+        targets.sort(() => Math.random() - 0.5)
+
+        // 4. Decide which strip indices to pre-fill (approx 8 pre-filled)
+        let preFilled = {}
+        let indices = Array.from({ length: 16 }, (_, i) => i)
+        indices
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 8)
+          .forEach(idx => {
+            preFilled[idx] = numbers[idx]
+          })
+
+        return { strip: numbers, preFilled, targets }
+      }
+
+      function renderCurrentGame() {
+        const gridContainer = document.getElementById('mainGrid')
+        const stripContainer = document.getElementById('numberStrip')
+
+        // Clear UI
+        gridContainer.innerHTML = ''
+        stripContainer.innerHTML = ''
+        document.getElementById('tada').style.display = 'none'
+
+        // Build Grid (top numbers come from currentGame.targets[].result)
+        currentGame.targets.forEach((t, i) => {
+          const cell = document.createElement('div')
+          cell.className = 'grid-cell'
+          cell.id = `grid-${i}`
+          cell.innerHTML = `
+                    <div class="target-number">${t.result}</div>
+                    <div class="input-row">
+                        <input type="number" class="n1">
+                        <select class="op"><option value=""></option><option value="+">+</option><option value="*">×</option></select>
+                        <input type="number" class="n2">
+                    </div>`
+          gridContainer.appendChild(cell)
+
+          // wire live updates for marking used targets
+          const row = cell.querySelector('.input-row')
+          if (row) {
+            const n1 = row.querySelector('.n1')
+            const n2 = row.querySelector('.n2')
+            const op = row.querySelector('.op')
+            if (n1) n1.addEventListener('input', markUsedTargets)
+            if (n2) n2.addEventListener('input', markUsedTargets)
+            if (op) op.addEventListener('change', markUsedTargets)
+            // blur -> check duplicates and mark both inputs when a second match appears
+            if (n1) n1.addEventListener('blur', markDuplicateInputs)
+            if (n2) n2.addEventListener('blur', markDuplicateInputs)
+          }
+        })
+
+        // Build Strip (bottom numbers)
+        currentGame.strip.forEach((num, i) => {
+          const box = document.createElement('div')
+          box.className = 'strip-cell'
+          box.id = `strip-${i}`
+          if (currentGame.preFilled && currentGame.preFilled[i] !== undefined) {
+            box.innerText = currentGame.preFilled[i]
+            box.dataset.prefilled = 'true'
+          } else {
+            box.innerHTML = `<input type="number" class="strip-input">`
+            box.dataset.prefilled = 'false'
+          }
+          stripContainer.appendChild(box)
+        })
+        // update marks after initial render
+        markUsedTargets()
+        markDuplicateInputs()
+      }
+
+      function newGame() {
+        currentGame = generateNewPuzzle()
+        renderCurrentGame()
+      }
+
+      function validateSolution() {
+        let isWin = true
+        const pairUsage = {}
+        let stripValues = []
+
+        // 1. Strip Validation (Inputs only)
+        // First gather strip values.
+        for (let i = 0; i < 16; i++) {
+          const box = document.getElementById(`strip-${i}`)
+          const input = box.querySelector('input')
+          const val = input ? parseInt(input.value) : parseInt(box.innerText)
+          stripValues.push({
+            val,
+            prefilled: box.dataset.prefilled === 'true',
+            box
+          })
+        }
+
+        // Now validate strip inputs against currentGame.strip
+        stripValues.forEach(({ val, prefilled, box }, i) => {
+          if (prefilled === false) {
+            box.classList.remove('s-red', 's-yellow', 's-green')
+            const nextVal = stripValues[i + 1]?.val
+            if (isNaN(val) || (i > 0 && val > nextVal)) {
+              box.classList.add('s-red')
+              isWin = false
+            } else if (val !== currentGame.strip[i]) {
+              box.classList.add('s-yellow')
+              isWin = false
+            } else {
+              box.classList.add('s-green')
+            }
+          }
+        })
+
+        // 2. Grid Validation
+        currentGame.targets.forEach((t, i) => {
+          const row = document
+            .getElementById(`grid-${i}`)
+            .querySelector('.input-row')
+          const n1 = parseInt(row.querySelector('.n1').value)
+          const n2 = parseInt(row.querySelector('.n2').value)
+          const op = row.querySelector('.op').value
+          row.classList.remove('err-math', 'err-pair', 'valid')
+
+          const result = op === '+' ? n1 + n2 : op === '*' ? n1 * n2 : null
+
+          if (result !== t.result || isNaN(n1) || isNaN(n2)) {
+            row.classList.add('err-math')
+            isWin = false
+          } else {
+            const key = [n1, n2].sort((a, b) => a - b).join('_')
+            if (!pairUsage[key])
+              pairUsage[key] = { plus: 0, times: 0, indices: [] }
+            if (op === '+') pairUsage[key].plus++
+            if (op === '*') pairUsage[key].times++
+            pairUsage[key].indices.push(i)
+          }
+        })
+
+        // 3. Logic Validation (Pairs used for both + and *)
+        for (const key in pairUsage) {
+          const p = pairUsage[key]
+          if (p.plus !== 1 || p.times !== 1) {
+            p.indices.forEach(idx =>
+              document
+                .getElementById(`grid-${idx}`)
+                .querySelector('.input-row')
+                .classList.add('err-pair')
+            )
+            isWin = false
+          } else {
+            p.indices.forEach(idx =>
+              document
+                .getElementById(`grid-${idx}`)
+                .querySelector('.input-row')
+                .classList.add('valid')
+            )
+          }
+        }
+
+        if (isWin) {
+          const el = document.getElementById('tada')
+          // show overlay + tada
+          if (overlay) {
+            overlay.classList.add('visible')
+            overlay.hidden = false
+          }
+          el.style.display = 'block'
+          el.classList.remove('tada-animate')
+          el.classList.add('tada-beat')
+          try {
+            playChime()
+          } catch (e) {
+            console.warn('chime failed', e)
+          }
+          // start confetti (non-blocking)
+          try {
+            launchConfetti(3500)
+          } catch (e) {
+            console.warn('confetti failed', e)
+          }
+          // Keep the overlay visible after confetti; user may click to dismiss.
+        }
+      }
+
+      function clearBoard() {
+        document
+          .querySelectorAll('.input-row input, .strip-input')
+          .forEach(i => (i.value = ''))
+        document.querySelectorAll('.op').forEach(s => (s.selectedIndex = 0))
+        document
+          .querySelectorAll('.input-row, .strip-cell, .target-number')
+          .forEach(el =>
+            el.classList.remove(
+              'err-math',
+              'err-pair',
+              'valid',
+              's-red',
+              's-yellow',
+              's-green',
+              't-used'
+            )
+          )
+        // remove duplicate marks on inputs
+        document
+          .querySelectorAll('.input-row input')
+          .forEach(i => i.classList.remove('num-dup'))
+        const tadaEl = document.getElementById('tada')
+        if (tadaEl) {
+          tadaEl.style.display = 'none'
+          tadaEl.classList.remove('tada-animate', 'tada-beat')
+        }
+        if (window.__ipAudioCtx) {
+          try {
+            window.__ipAudioCtx.close()
+          } catch (e) {}
+          window.__ipAudioCtx = null
+        }
+      }
+
+      function autoSolve() {
+        for (let i = 0; i < 16; i++) {
+          const input = document
+            .getElementById(`strip-${i}`)
+            .querySelector('input')
+          if (input) input.value = currentGame.strip[i]
+        }
+        currentGame.targets.forEach((t, i) => {
+          const row = document
+            .getElementById(`grid-${i}`)
+            .querySelector('.input-row')
+          row.querySelector('.n1').value = t.n1
+          row.querySelector('.n2').value = t.n2
+          row.querySelector('.op').value = t.op
+        })
+        // reflect marks after auto-solve
+        markUsedTargets()
+        // reflect duplicate marks after auto-solve
+        markDuplicateInputs()
+      }
+
+      // Confirmation wrappers using SweetAlert2 so programmatic calls are not blocked
+      function newGameConfirmed() {
+        Swal.fire({
+          title: 'Start a new game?',
+          text: 'Your current progress will be lost.',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Start new',
+          cancelButtonText: 'Cancel'
+        }).then(result => {
+          if (result.isConfirmed) {
+            newGame()
+          }
+        })
+      }
+
+      function clearBoardConfirmed() {
+        Swal.fire({
+          title: 'Clear all inputs?',
+          text: 'This cannot be undone.',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Clear',
+          cancelButtonText: 'Cancel'
+        }).then(result => {
+          if (result.isConfirmed) {
+            clearBoard()
+          }
+        })
+      }
+
+      function autoSolveConfirmed() {
+        Swal.fire({
+          title: 'Auto-solve?',
+          text: 'Auto-solve will fill in answers for you. Continue?',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Auto-solve',
+          cancelButtonText: 'Cancel'
+        }).then(result => {
+          if (result.isConfirmed) {
+            autoSolve()
+          }
+        })
+      }
+
+      function closeTada() {
+        const el = document.getElementById('tada')
+        if (!el) return
+
+        // stop continuous beat while we run the grow+fade animation
+        el.classList.remove('tada-beat')
+        el.classList.add('tada-animate')
+        el.style.display = 'block'
+        setTimeout(() => {
+          el.style.display = 'none'
+          el.classList.remove('tada-animate')
+
+          // Close overlay.
+          if (overlay) {
+            overlay.classList.remove('visible')
+            overlay.hidden = true
+          }
+        }, 1500)
+      }
+
+      // --- Audio helpers: delicate chime (sweet & soft) ---
+      function getAudioCtx() {
+        if (!window.__ipAudioCtx) {
+          window.__ipAudioCtx = new (window.AudioContext ||
+            window.webkitAudioContext)()
+        }
+        return window.__ipAudioCtx
+      }
+
+      // --- Reconstruction helper: given top(results) and bottom(strip),
+      // attempt to find 8 disjoint pairs of bottom numbers such that for
+      // each pair (a,b) both a+b and a*b appear in top. Returns a map
+      // from result -> array of {n1,n2,op} entries (since results may repeat).
+      function reconstructTargetsFromTopAndBottom(top, bottom) {
+        // counts for top values
+        const topCounts = {}
+        top.forEach(v => {
+          topCounts[v] = (topCounts[v] || 0) + 1
+        })
+
+        const N = bottom.length
+        if (N !== 16 || top.length !== 16) return null
+
+        const used = new Array(N).fill(false)
+        const pairs = []
+
+        // Backtracking search to pair up all indices
+        function backtrack() {
+          // find first unused index
+          let i = 0
+          while (i < N && used[i]) i++
+          if (i === N) return true // all paired
+
+          used[i] = true
+          for (let j = i + 1; j < N; j++) {
+            if (used[j]) continue
+            const a = bottom[i]
+            const b = bottom[j]
+            const s = a + b
+            const p = a * b
+            if ((topCounts[s] || 0) > 0 && (topCounts[p] || 0) > 0) {
+              // consume
+              topCounts[s]--
+              topCounts[p]--
+              used[j] = true
+              pairs.push([a, b])
+              if (backtrack()) return true
+              // undo
+              pairs.pop()
+              used[j] = false
+              topCounts[s]++
+              topCounts[p]++
+            }
+          }
+          used[i] = false
+          return false
+        }
+
+        // Try to find a solution. We clone counts because backtrack mutates it.
+        const countsClone = Object.assign({}, topCounts)
+        const success = backtrack()
+        if (!success) {
+          // restore counts (not strictly necessary) and fail
+          Object.keys(countsClone).forEach(k => (topCounts[k] = countsClone[k]))
+          return null
+        }
+
+        // Build result map: for each pair produce two entries: sum(+), product(*)
+        const resultMap = {}
+        pairs.forEach(([a, b]) => {
+          const s = a + b
+          const p = a * b
+          if (!resultMap[s]) resultMap[s] = []
+          if (!resultMap[p]) resultMap[p] = []
+          resultMap[s].push({ n1: a, n2: b, op: '+' })
+          resultMap[p].push({ n1: a, n2: b, op: '*' })
+        })
+        return resultMap
+      }
+
+      // Sweet, softer chime: detuned sine partials with gentle delay/reverb-like tail
+      function playChime() {
+        const ctx = getAudioCtx()
+        if (ctx.state === 'suspended') ctx.resume()
+        const now = ctx.currentTime
+        const freqs = [880, 1320, 1760]
+
+        freqs.forEach((f, i) => {
+          const osc = ctx.createOscillator()
+          osc.type = 'sine'
+          // tiny detune for warmth
+          osc.frequency.setValueAtTime(f * (1 + (i - 1) * 0.0018), now)
+
+          const gain = ctx.createGain()
+          gain.gain.setValueAtTime(0.0001, now)
+          // lower peak and slightly quicker initial decay for softness
+          gain.gain.exponentialRampToValueAtTime(0.12 / (i + 1), now + 0.01)
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.6)
+
+          const filter = ctx.createBiquadFilter()
+          filter.type = 'bandpass'
+          filter.frequency.setValueAtTime(f * 0.95, now)
+          filter.Q.value = 6
+
+          const delay = ctx.createDelay()
+          delay.delayTime.value = 0.06 + i * 0.015
+          const fb = ctx.createGain()
+          fb.gain.value = 0.12
+
+          osc.connect(gain)
+          gain.connect(filter)
+          filter.connect(ctx.destination)
+          filter.connect(delay)
+          delay.connect(fb)
+          fb.connect(delay)
+          delay.connect(ctx.destination)
+
+          osc.start(now + i * 0.01)
+          osc.stop(now + 1.9)
+        })
+
+        // soft high-frequency sparkle
+        const sparkle = ctx.createOscillator()
+        sparkle.type = 'triangle'
+        sparkle.frequency.setValueAtTime(2600, now)
+        const sGain = ctx.createGain()
+        sGain.gain.setValueAtTime(0.0001, now)
+        sGain.gain.exponentialRampToValueAtTime(0.045, now + 0.01)
+        sGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.1)
+        sparkle.connect(sGain)
+        sGain.connect(ctx.destination)
+        sparkle.start(now)
+        sparkle.stop(now + 1.2)
+      }
+
+      // Initialize first game
+      function exportPuzzle() {
+        // top: array of top grid numbers (results). bottom: strip numbers
+        const top = currentGame.targets.map(t => t.result).join(',')
+        const bottom = currentGame.strip.join(',')
+        const params = new URLSearchParams({ top, bottom })
+
+        // include prefilled indices if present (format: idx=val,idx=val,...)
+        if (
+          currentGame.preFilled &&
+          Object.keys(currentGame.preFilled).length > 0
+        ) {
+          const prefilledStr = Object.entries(currentGame.preFilled)
+            .map(([idx, val]) => `${idx}=${val}`)
+            .join(',')
+          params.set('prefilled', prefilledStr)
+        }
+
+        const url =
+          window.location.origin +
+          window.location.pathname +
+          '?' +
+          params.toString()
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard
+            .writeText(url)
+            .then(() => alert('Puzzle URL copied to clipboard'))
+        } else {
+          prompt('Copy this puzzle URL', url)
+        }
+      }
+
+      function loadPuzzleFromURL() {
+        const params = new URLSearchParams(window.location.search)
+        if (params.has('top') && params.has('bottom')) {
+          try {
+            const top = params
+              .get('top')
+              .split(',')
+              .map(n => parseInt(n, 10))
+            const bottom = params
+              .get('bottom')
+              .split(',')
+              .map(n => parseInt(n, 10))
+            if (
+              top.length === 16 &&
+              bottom.length === 16 &&
+              top.every(n => !isNaN(n)) &&
+              bottom.every(n => !isNaN(n))
+            ) {
+              // Build a currentGame from URL — n1/n2/op are left empty for the player to fill
+              currentGame.strip = bottom
+              // parse optional prefilled param (format: idx=val,idx=val,...)
+              currentGame.preFilled = {}
+              if (params.has('prefilled')) {
+                try {
+                  const pf = params
+                    .get('prefilled')
+                    .split(',')
+                    .map(s => s.split('='))
+                  pf.forEach(([idx, val]) => {
+                    const i = parseInt(idx, 10)
+                    const v = parseInt(val, 10)
+                    if (!isNaN(i) && !isNaN(v) && i >= 0 && i < 16) {
+                      currentGame.preFilled[i] = v
+                    }
+                  })
+                } catch (e) {
+                  console.warn('invalid prefilled param', e)
+                }
+              }
+              // attempt to reconstruct pairs so autoSolve can work
+              const reconstructed = reconstructTargetsFromTopAndBottom(
+                top,
+                bottom
+              )
+              if (reconstructed) {
+                // reconstructed is a map result -> {n1,n2,op}
+                currentGame.targets = top.map(r => {
+                  const entry =
+                    reconstructed[r] && reconstructed[r].length
+                      ? reconstructed[r].shift()
+                      : null
+                  return entry
+                    ? { result: r, n1: entry.n1, n2: entry.n2, op: entry.op }
+                    : { result: r, n1: null, n2: null, op: '' }
+                })
+              } else {
+                currentGame.targets = top.map(r => ({
+                  result: r,
+                  n1: null,
+                  n2: null,
+                  op: ''
+                }))
+              }
+              renderCurrentGame()
+              return
+            }
+          } catch (e) {
+            console.warn('invalid puzzle params', e)
+          }
+        }
+        // fallback: generate a random puzzle
+        newGame()
+      }
+
+      // Set a random blurred background, then load puzzle
+      setRandomBackground()
+      // load puzzle from URL when page opens
+      loadPuzzleFromURL()
+
+      // --- Confetti implementation (canvas-based) ---
+      function launchConfetti(duration = 3500) {
+        // Respect reduced motion
+        if (
+          window.matchMedia &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ) {
+          console.log('Reduced motion enabled; skipping confetti')
+          return
+        }
+
+        // If already running, stop previous
+        if (window.__ipConfetti && window.__ipConfetti.stop) {
+          window.__ipConfetti.stop()
+        }
+
+        const canvas = document.createElement('canvas')
+        canvas.id = 'confettiCanvas'
+        canvas.style.position = 'fixed'
+        canvas.style.left = '0'
+        canvas.style.top = '0'
+        canvas.style.width = '100%'
+        canvas.style.height = '100%'
+        canvas.style.pointerEvents = 'none'
+        canvas.style.zIndex = 9999
+        document.body.appendChild(canvas)
+
+        const ctx = canvas.getContext('2d')
+        let w = (canvas.width = window.innerWidth)
+        let h = (canvas.height = window.innerHeight)
+
+        window.addEventListener('resize', onResize)
+
+        function onResize() {
+          w = canvas.width = window.innerWidth
+          h = canvas.height = window.innerHeight
+        }
+
+        const colors = [
+          '#ff595e',
+          '#ffca3a',
+          '#8ac926',
+          '#1982c4',
+          '#6a4c93',
+          '#ff7b00'
+        ]
+
+        const confettiCount = Math.min(500, Math.floor(w / 2))
+        const particles = []
+
+        for (let i = 0; i < confettiCount; i++) {
+          particles.push(createParticle())
+        }
+
+        let running = true
+        const start = performance.now()
+
+        function createParticle() {
+          const size = randRange(6, 14)
+          return {
+            x: Math.random() * w,
+            y: Math.random() * -h * 0.5,
+            vx: randRange(-2, 2),
+            vy: randRange(2, 6),
+            size,
+            rot: Math.random() * Math.PI * 2,
+            rotSpeed: randRange(-0.1, 0.1),
+            color: colors[Math.floor(Math.random() * colors.length)],
+            tilt: randRange(-0.4, 0.4)
+          }
+        }
+
+        function randRange(a, b) {
+          return a + Math.random() * (b - a)
+        }
+
+        function draw(now) {
+          if (!running) return
+          const elapsed = now - start
+          ctx.clearRect(0, 0, w, h)
+          particles.forEach(p => {
+            p.x += p.vx
+            p.y += p.vy + Math.sin((now + p.x) / 600) * 0.3
+            p.vx += Math.sin((p.y + now) / 1100) * 0.02
+            p.vy += 0.03 // gravity
+            p.rot += p.rotSpeed
+            // Draw rectangle rotated
+            ctx.save()
+            ctx.translate(p.x, p.y)
+            ctx.rotate(p.rot)
+            ctx.fillStyle = p.color
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6)
+            ctx.restore()
+            // recycle
+            if (p.y > h + 20 || p.x < -50 || p.x > w + 50) {
+              Object.assign(p, createParticle())
+              p.y = -10
+            }
+          })
+
+          if (running) requestAnimationFrame(draw)
+        }
+
+        requestAnimationFrame(draw)
+
+        // stop after duration and cleanup
+        const timeoutId = setTimeout(() => stop(), duration)
+
+        function stop() {
+          running = false
+          clearTimeout(timeoutId)
+          window.removeEventListener('resize', onResize)
+          // fade out then remove
+          canvas.style.transition = 'opacity 420ms ease'
+          canvas.style.opacity = '0'
+          setTimeout(() => {
+            try {
+              if (canvas.parentNode) canvas.parentNode.removeChild(canvas)
+            } catch (e) {}
+          }, 450)
+        }
+
+        // expose stop so overlay click can cancel
+        window.__ipConfetti = { stop }
+        return { stop }
+      }
+
+      // allow clicking overlay to close celebration and stop confetti early
+      ;(function wireOverlayDismiss() {
+        const ov = document.getElementById('celebrationOverlay')
+        if (!ov) return
+        ov.addEventListener('click', () => {
+          ov.classList.remove('visible')
+          ov.hidden = true
+          if (window.__ipConfetti && window.__ipConfetti.stop) {
+            window.__ipConfetti.stop()
+          }
+
+          // Close tada if visible
+          closeTada()
+        })
+      })()
+
+      // Clicking the phrase copies it to clipboard and shows a brief confirmation
+      ;(function wirePhraseCopy() {
+        const phrase = document.getElementById('phrase')
+        if (!phrase) return
+
+        async function copyText(text) {
+          if (!text) return
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(text)
+            } else {
+              const ta = document.createElement('textarea')
+              ta.value = text
+              ta.style.position = 'fixed'
+              ta.style.left = '-9999px'
+              document.body.appendChild(ta)
+              ta.select()
+              document.execCommand('copy')
+              ta.remove()
+            }
+            return true
+          } catch (e) {
+            console.warn('copy failed', e)
+            return false
+          }
+        }
+
+        let timeoutId = null
+        phrase.addEventListener('click', async () => {
+          const text = phrase.innerText.trim()
+          if (!text) return
+          const ok = await copyText(text)
+          if (!ok) return
+
+          phrase.classList.add('phrase-copied')
+          // short-lived aria live status for screen readers
+          const sr = document.createElement('div')
+          sr.setAttribute('aria-live', 'polite')
+          sr.style.position = 'absolute'
+          sr.style.left = '-9999px'
+          sr.innerText = 'Phrase copied to clipboard'
+          document.body.appendChild(sr)
+          clearTimeout(timeoutId)
+          timeoutId = setTimeout(() => {
+            phrase.classList.remove('phrase-copied')
+            try {
+              if (sr.parentNode) sr.parentNode.removeChild(sr)
+            } catch (e) {}
+          }, 100)
+        })
+      })()
+    </script>
+  </body>
+</html>
