@@ -608,6 +608,10 @@
         cursor: pointer;
       }
 
+      .offcanvas-close p {
+        margin-top: 16px;
+      }
+
       .offcanvas-backdrop {
         position: fixed;
         inset: 0;
@@ -690,7 +694,9 @@
       aria-hidden="true"
     >
       <div class="offcanvas-inner">
-        <button class="offcanvas-close" aria-label="Close menu">&times;</button>
+        <button class="offcanvas-close" aria-label="Close menu">
+          <p>&times;</p>
+        </button>
         <nav id="main-nav" aria-label="Main Navigation">
           <ul>
             <li>
